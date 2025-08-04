@@ -10,7 +10,7 @@ import dash_bootstrap_components as dbc
 # ----------------------------------------------------------------------------------------------
 
 # CRZ_CSV = "MTA_Congestion_Relief_Zone_Vehicle_Entries__Beginning_2025_20250708.csv"  # local file
-CRZ_CSV = "https://drive.google.com/uc?export=download&id=YOUR_FILE_ID_HERE"  # replace YOUR_FILE_ID_HERE with actual ID
+CRZ_CSV = "https://drive.google.com/uc?export=download&id=1PpARt1Za85hZrMFQipirgg1o7JKfuVlJ"
 
 df = pd.read_csv(CRZ_CSV)
 
