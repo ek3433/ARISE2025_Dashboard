@@ -1,0 +1,7 @@
+# skip large data & OS clutter
+*.csv
+*.npy
+*.pth
+bus_monthly_cache.pkl
+__pycache__/
+.env
