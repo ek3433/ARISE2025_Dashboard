@@ -13,7 +13,7 @@ import dash_bootstrap_components as dbc
 
 PARQUET_FILE = "bus_monthly.parquet"
 
-if not pathlib.Path(PARQUET_FILE).exists():
+if not Path(PARQUET_FILE).exists():
     raise FileNotFoundError(
         f"{PARQUET_FILE} is missing. Run the pre-aggregation script locally and commit the file."
     )
