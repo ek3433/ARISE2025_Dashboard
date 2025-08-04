@@ -12,7 +12,18 @@ import dash_bootstrap_components as dbc
 # CRZ_CSV = "MTA_Congestion_Relief_Zone_Vehicle_Entries__Beginning_2025_20250708.csv"  # local file
 CRZ_CSV = "https://drive.google.com/uc?export=download&id=1PpARt1Za85hZrMFQipirgg1o7JKfuVlJ"
 
-df = pd.read_csv(CRZ_CSV)
+# Try to read CSV with error handling for inconsistent columns
+try:
+    df = pd.read_csv(CRZ_CSV, on_bad_lines='skip', engine='python')
+except Exception as e:
+    print(f"Error reading CSV: {e}")
+    # Fallback: try with different parameters
+    try:
+        df = pd.read_csv(CRZ_CSV, on_bad_lines='skip', engine='c', error_bad_lines=False)
+    except Exception as e2:
+        print(f"Second attempt failed: {e2}")
+        # Last resort: try with quoting
+        df = pd.read_csv(CRZ_CSV, on_bad_lines='skip', engine='python', quoting=3)
 
 df["Toll 10 Minute Block"] = pd.to_datetime(df["Toll 10 Minute Block"], format="%m/%d/%Y %I:%M:%S %p")
 df["Toll Date"] = pd.to_datetime(df["Toll Date"], format="%m/%d/%Y")
