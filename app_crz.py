@@ -17,21 +17,40 @@ print("Creating sample CRZ data for testing...")
 import numpy as np
 from datetime import datetime, timedelta
 
-# Create sample data with the expected columns
+# Create sample data with realistic CRZ structure
 dates = pd.date_range('2025-01-01', '2025-06-30', freq='10T')
+
+# Realistic CRZ vehicle classes
+vehicle_classes = ['2-Axle Auto', '3-Axle Auto', '4-Axle Auto', '5-Axle Auto', '6-Axle Auto', 
+                   '2-Axle Truck', '3-Axle Truck', '4-Axle Truck', '5-Axle Truck', '6-Axle Truck',
+                   'Bus', 'Motorcycle', 'Emergency Vehicle']
+
+# Realistic CRZ detection regions
+detection_regions = ['Manhattan CBD', 'Brooklyn Bridge', 'Queensboro Bridge', 'Williamsburg Bridge',
+                     'Manhattan Bridge', 'Brooklyn Battery Tunnel', 'Queens Midtown Expressway',
+                     'FDR Drive', 'West Side Highway', 'Harlem River Drive']
+
+# Realistic detection groups
+detection_groups = ['Manhattan Entry Points', 'Brooklyn Entry Points', 'Queens Entry Points',
+                    'Tunnel Entry Points', 'Bridge Entry Points', 'Expressway Entry Points']
+
+# Create realistic sample data
 sample_data = {
     'Toll 10 Minute Block': dates,
     'Toll Date': dates.date,
-    'Detection Region': np.random.choice(['Manhattan', 'Brooklyn', 'Queens'], len(dates)),
-    'Vehicle Class': np.random.choice(['Passenger', 'Truck', 'Bus'], len(dates)),
-    'Detection Group': np.random.choice(['Group A', 'Group B', 'Group C'], len(dates)),
-    'CRZ Entries': np.random.randint(10, 1000, len(dates)),
+    'Detection Region': np.random.choice(detection_regions, len(dates)),
+    'Vehicle Class': np.random.choice(vehicle_classes, len(dates)),
+    'Detection Group': np.random.choice(detection_groups, len(dates)),
+    'CRZ Entries': np.random.randint(5, 500, len(dates)),  # More realistic entry counts
     'Time Period': np.random.choice(['Peak', 'Non-Peak'], len(dates)),
-    'Excluded Roadway Entries': np.random.randint(0, 50, len(dates))
+    'Excluded Roadway Entries': np.random.randint(0, 20, len(dates))
 }
 
 df = pd.DataFrame(sample_data)
 print(f"Created sample data with {len(df)} rows")
+print(f"Vehicle Classes: {sorted(df['Vehicle Class'].unique())}")
+print(f"Detection Regions: {sorted(df['Detection Region'].unique())}")
+print(f"Detection Groups: {sorted(df['Detection Group'].unique())}")
 
 df["Toll 10 Minute Block"] = pd.to_datetime(df["Toll 10 Minute Block"], format="%m/%d/%Y %I:%M:%S %p")
 df["Toll Date"] = pd.to_datetime(df["Toll Date"], format="%m/%d/%Y")
