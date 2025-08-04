@@ -1,7 +1,10 @@
-# skip large data & OS clutter
+﻿# OS / Python
+__pycache__/
+*.pyc
+.env
+
+# Large data
 *.csv
 *.npy
 *.pth
 bus_monthly_cache.pkl
-__pycache__/
-.env
