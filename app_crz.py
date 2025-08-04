@@ -20,30 +20,34 @@ from datetime import datetime, timedelta
 # Create sample data with realistic CRZ structure
 dates = pd.date_range('2025-01-01', '2025-06-30', freq='10T')
 
-# Realistic CRZ vehicle classes
-vehicle_classes = ['2-Axle Auto', '3-Axle Auto', '4-Axle Auto', '5-Axle Auto', '6-Axle Auto', 
-                   '2-Axle Truck', '3-Axle Truck', '4-Axle Truck', '5-Axle Truck', '6-Axle Truck',
-                   'Bus', 'Motorcycle', 'Emergency Vehicle']
+# Realistic CRZ vehicle classes (from actual CSV)
+vehicle_classes = ['1 - Cars, Pickups and Vans', '2 - Single-Unit Trucks', '3 - Multi-Unit Trucks', 
+                   '4 - Buses', '5 - Motorcycles', 'TLC Taxi/FHV']
 
-# Realistic CRZ detection regions
-detection_regions = ['Manhattan CBD', 'Brooklyn Bridge', 'Queensboro Bridge', 'Williamsburg Bridge',
-                     'Manhattan Bridge', 'Brooklyn Battery Tunnel', 'Queens Midtown Expressway',
-                     'FDR Drive', 'West Side Highway', 'Harlem River Drive']
+# Realistic CRZ detection regions (from actual CSV)
+detection_regions = ['Brooklyn', 'East 60th St', 'FDR Drive', 'New Jersey', 'Queens', 'West 60th St', 'West Side Highway']
 
-# Realistic detection groups
-detection_groups = ['Manhattan Entry Points', 'Brooklyn Entry Points', 'Queens Entry Points',
-                    'Tunnel Entry Points', 'Bridge Entry Points', 'Expressway Entry Points']
+# Realistic detection groups (from actual CSV)
+detection_groups = ['Brooklyn Bridge', 'East 60th St', 'FDR Drive at 60th St', 'Holland Tunnel', 
+                    'Hugh L. Carey Tunnel', 'Lincoln Tunnel', 'Manhattan Bridge', 'Queens Midtown Tunnel', 
+                    'Queensboro Bridge', 'West 60th St', 'West Side Highway at 60th St', 'Williamsburg Bridge']
 
-# Create realistic sample data
+# Create realistic sample data with correct column names
 sample_data = {
-    'Toll 10 Minute Block': dates,
     'Toll Date': dates.date,
-    'Detection Region': np.random.choice(detection_regions, len(dates)),
+    'Toll Hour': dates,
+    'Toll 10 Minute Block': dates,
+    'Minute of Hour': dates.minute,
+    'Hour of Day': dates.hour,
+    'Day of Week Int': dates.dayofweek,
+    'Day of Week': dates.day_name(),
+    'Toll Week': dates.isocalendar().week,
+    'Time Period': np.random.choice(['Peak', 'Non-Peak'], len(dates)),
     'Vehicle Class': np.random.choice(vehicle_classes, len(dates)),
     'Detection Group': np.random.choice(detection_groups, len(dates)),
-    'CRZ Entries': np.random.randint(5, 500, len(dates)),  # More realistic entry counts
-    'Time Period': np.random.choice(['Peak', 'Non-Peak'], len(dates)),
-    'Excluded Roadway Entries': np.random.randint(0, 20, len(dates))
+    'Detection Region': np.random.choice(detection_regions, len(dates)),
+    'CRZ Entries': np.random.randint(0, 200, len(dates)),  # More realistic entry counts
+    'Excluded Roadway Entries': np.random.randint(0, 10, len(dates))
 }
 
 df = pd.DataFrame(sample_data)
