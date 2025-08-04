@@ -1,0 +1,5 @@
+[33mb160d8e[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m)[m Fix CSV parsing error in CRZ dashboard with error handling
+[33mf910432[m Fix pathlib import error in bus app
+[33m2d2d0ae[m Update bus app to use parquet file and add pyarrow dependency
+[33m0a1d3b1[m[33m ([m[1;31morigin/main[m[33m)[m Add real Google Drive URL for CRZ data
+[33m8497292[m Update CRZ app to use remote CSV URL

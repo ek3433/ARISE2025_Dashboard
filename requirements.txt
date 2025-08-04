@@ -4,3 +4,4 @@ pandas
 plotly
 qrcode
 pyarrow
+gdown>=4.7.0

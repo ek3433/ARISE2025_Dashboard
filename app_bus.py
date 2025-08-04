@@ -21,26 +21,31 @@ def load_bus_data():
     print("Loading bus data from Google Drive...")
     
     try:
-        # Load 2020-2024 data
-        print("Loading 2020-2024 data...")
-        df_2020_2024 = pd.read_csv(BUS_2020_2024_URL, nrows=50000)  # Load more data
-        print(f"Loaded {len(df_2020_2024)} rows from 2020-2024 data")
-        print(f"Columns: {df_2020_2024.columns.tolist()}")
+        # Check if we have downloaded files first
+        if os.path.exists("bus_2020_2024.csv") and os.path.exists("bus_2025.csv"):
+            print("Using downloaded files...")
+            df_2020_2024 = pd.read_csv("bus_2020_2024.csv")
+            df_2025 = pd.read_csv("bus_2025.csv")
+        else:
+            # Load from Google Drive URLs
+            print("Loading 2020-2024 data from Google Drive...")
+            df_2020_2024 = pd.read_csv(BUS_2020_2024_URL, 
+                                      on_bad_lines='skip', engine='python')
+            print(f"Loaded {len(df_2020_2024)} rows from 2020-2024 data")
+            
+            print("Loading 2025 data from Google Drive...")
+            df_2025 = pd.read_csv(BUS_2025_URL, 
+                                 on_bad_lines='skip', engine='python')
+            print(f"Loaded {len(df_2025)} rows from 2025 data")
         
-        # Load 2025 data
-        print("Loading 2025 data...")
-        df_2025 = pd.read_csv(BUS_2025_URL, nrows=50000)  # Load more data
-        print(f"Loaded {len(df_2025)} rows from 2025 data")
-        print(f"Columns: {df_2025.columns.tolist()}")
+        print(f"Columns: {df_2020_2024.columns.tolist()}")
         
         # Handle different timestamp formats
         print("Converting timestamps...")
         
-        # 2020-2024 data: format like "10/23/2024 1:00"
-        df_2020_2024['transit_timestamp'] = pd.to_datetime(df_2020_2024['transit_timestamp'], format='%m/%d/%Y %H:%M', errors='coerce')
-        
-        # 2025 data: format like "01/02/2025 07:00:00 AM"
-        df_2025['transit_timestamp'] = pd.to_datetime(df_2025['transit_timestamp'], format='%m/%d/%Y %I:%M:%S %p', errors='coerce')
+        # Convert timestamps with flexible parsing
+        df_2020_2024['transit_timestamp'] = pd.to_datetime(df_2020_2024['transit_timestamp'], errors='coerce')
+        df_2025['transit_timestamp'] = pd.to_datetime(df_2025['transit_timestamp'], errors='coerce')
         
         # Remove rows with invalid timestamps
         df_2020_2024 = df_2020_2024.dropna(subset=['transit_timestamp'])
@@ -110,11 +115,6 @@ def map_borough(route):
 
 if not bus_monthly.empty and "Borough" not in bus_monthly.columns:
     bus_monthly["Borough"] = bus_monthly["Route"].apply(map_borough)
-
-if not bus_monthly.empty and "YearMonth" not in bus_monthly.columns:
-    bus_monthly["YearMonth"] = pd.to_datetime(
-        bus_monthly["Year"].astype(str) + "-" + bus_monthly["MonthNum"].astype(str).str.zfill(2) + "-01"
-    )
 
 # Only keep Manhattan + express routes of interest (matching user's target_routes)
 wanted_lines = [
