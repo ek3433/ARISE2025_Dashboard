@@ -24,15 +24,26 @@ dates = pd.date_range('2025-01-01', '2025-06-30', freq='10T')
 vehicle_classes = ['1 - Cars, Pickups and Vans', '2 - Single-Unit Trucks', '3 - Multi-Unit Trucks', 
                    '4 - Buses', '5 - Motorcycles', 'TLC Taxi/FHV']
 
+# Define the correct relationships between Detection Regions and Groups
+region_group_mapping = {
+    'Brooklyn': ['Brooklyn Bridge', 'Hugh L. Carey Tunnel', 'Manhattan Bridge', 'Williamsburg Bridge'],
+    'East 60th St': ['East 60th St'],
+    'FDR Drive': ['FDR Drive at 60th St'],
+    'New Jersey': ['Holland Tunnel', 'Lincoln Tunnel'],
+    'Queens': ['Queens Midtown Tunnel', 'Queensboro Bridge'],
+    'West 60th St': ['West 60th St'],
+    'West Side Highway': ['West Side Highway at 60th St']
+}
+
 # Realistic CRZ detection regions (from actual CSV)
-detection_regions = ['Brooklyn', 'East 60th St', 'FDR Drive', 'New Jersey', 'Queens', 'West 60th St', 'West Side Highway']
+detection_regions = list(region_group_mapping.keys())
 
 # Realistic detection groups (from actual CSV)
 detection_groups = ['Brooklyn Bridge', 'East 60th St', 'FDR Drive at 60th St', 'Holland Tunnel', 
                     'Hugh L. Carey Tunnel', 'Lincoln Tunnel', 'Manhattan Bridge', 'Queens Midtown Tunnel', 
                     'Queensboro Bridge', 'West 60th St', 'West Side Highway at 60th St', 'Williamsburg Bridge']
 
-# Create realistic sample data with correct column names
+# Create realistic sample data with correct relationships
 sample_data = {
     'Toll Date': dates.date,
     'Toll Hour': dates,
@@ -44,17 +55,32 @@ sample_data = {
     'Toll Week': dates.isocalendar().week,
     'Time Period': np.random.choice(['Peak', 'Non-Peak'], len(dates)),
     'Vehicle Class': np.random.choice(vehicle_classes, len(dates)),
-    'Detection Group': np.random.choice(detection_groups, len(dates)),
     'Detection Region': np.random.choice(detection_regions, len(dates)),
     'CRZ Entries': np.random.randint(0, 200, len(dates)),  # More realistic entry counts
     'Excluded Roadway Entries': np.random.randint(0, 10, len(dates))
 }
 
+# Create the dataframe
 df = pd.DataFrame(sample_data)
+
+# Now assign Detection Groups based on the selected Detection Region
+def assign_detection_group(row):
+    region = row['Detection Region']
+    possible_groups = region_group_mapping[region]
+    return np.random.choice(possible_groups)
+
+df['Detection Group'] = df.apply(assign_detection_group, axis=1)
+
 print(f"Created sample data with {len(df)} rows")
 print(f"Vehicle Classes: {sorted(df['Vehicle Class'].unique())}")
 print(f"Detection Regions: {sorted(df['Detection Region'].unique())}")
 print(f"Detection Groups: {sorted(df['Detection Group'].unique())}")
+
+# Verify relationships are maintained
+print("\nVerifying region-group relationships:")
+for region in sorted(df['Detection Region'].unique()):
+    groups = sorted(df[df['Detection Region'] == region]['Detection Group'].unique())
+    print(f"{region}: {groups}")
 
 df["Toll 10 Minute Block"] = pd.to_datetime(df["Toll 10 Minute Block"], format="%m/%d/%Y %I:%M:%S %p")
 df["Toll Date"] = pd.to_datetime(df["Toll Date"], format="%m/%d/%Y")
