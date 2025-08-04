@@ -8,3 +8,10 @@ __pycache__/
 *.npy
 *.pth
 bus_monthly_cache.pkl
+
+# keep the aggregated parquet
+!bus_monthly.parquet
+
+# Keep these small aggregated files
+!data_reports_monthly.csv
+!bus_monthly.parquet
