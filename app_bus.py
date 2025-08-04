@@ -1,5 +1,4 @@
 import os
-import pickle
 from pathlib import Path
 
 import dash
@@ -7,68 +6,19 @@ from dash import dcc, html, Input, Output, State
 import pandas as pd
 import plotly.express as px
 import dash_bootstrap_components as dbc
-import warnings
 
 # ----------------------------------------------------------------------------------------------
-# 1. Load & aggregate BUS ridership data (memory-friendly)
+# 1. Load pre-aggregated BUS ridership data
 # ----------------------------------------------------------------------------------------------
 
-BUS_FILES = [
-    "MTA_Bus_Hourly_Ridership__2020-2024.csv",
-    "MTA_Bus_Hourly_Ridership__Beginning_2025.csv",
-]
+PARQUET_FILE = "bus_monthly.parquet"
 
-CACHE_PATH = Path("bus_monthly_cache.pkl")
-
-
-def build_monthly_cache(paths):
-    # Suppress pandas date-parsing warning spam
-    warnings.filterwarnings(
-        "ignore",
-        message="Could not infer format, so each element will be parsed individually",
+if not pathlib.Path(PARQUET_FILE).exists():
+    raise FileNotFoundError(
+        f"{PARQUET_FILE} is missing. Run the pre-aggregation script locally and commit the file."
     )
-    agg_frames = []
-    for p in paths:
-        if not Path(p).exists():
-            continue  # skip missing files silently
-        # Read only the three columns we need in 0.5-million-row chunks
-        cols = ["transit_timestamp", "bus_route", "ridership"]
-        for chunk in pd.read_csv(p, usecols=cols, chunksize=500_000):
-            chunk["transit_timestamp"] = pd.to_datetime(
-                chunk["transit_timestamp"], errors="coerce", infer_datetime_format=True
-            )
-            chunk = chunk.dropna(subset=["transit_timestamp"])
-            chunk["ridership"] = pd.to_numeric(chunk["ridership"], errors="coerce")
-            chunk = chunk.dropna(subset=["ridership"])
-            chunk["Year"] = chunk["transit_timestamp"].dt.year
-            chunk["MonthNum"] = chunk["transit_timestamp"].dt.month
-            agg = (
-                chunk.groupby(["bus_route", "Year", "MonthNum"], as_index=False)["ridership"].sum()
-            )
-            agg_frames.append(agg)
-    if not agg_frames:
-        return pd.DataFrame(columns=["Route", "Year", "MonthNum", "Ridership"])
 
-    monthly = pd.concat(agg_frames).groupby(["bus_route", "Year", "MonthNum"], as_index=False)[
-        "ridership"
-    ].sum()
-    monthly = monthly.rename(columns={"bus_route": "Route", "ridership": "Ridership"})
-    monthly["Month"] = pd.to_datetime(monthly["MonthNum"], format="%m").dt.month_name()
-    monthly["YearMonth"] = pd.to_datetime(
-        monthly["Year"].astype(str) + "-" + monthly["MonthNum"].astype(str).str.zfill(2) + "-01"
-    )
-    return monthly
-
-
-if CACHE_PATH.exists():
-    bus_monthly = pickle.loads(CACHE_PATH.read_bytes())
-else:
-    bus_monthly = build_monthly_cache(BUS_FILES)
-    # Persist for next run (optional – comment out if disk space is scarce)
-    try:
-        CACHE_PATH.write_bytes(pickle.dumps(bus_monthly))
-    except Exception:
-        pass
+bus_monthly = pd.read_parquet(PARQUET_FILE)
 
 def map_borough(route):
     if route.startswith("BxM"):
