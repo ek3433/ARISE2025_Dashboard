@@ -4,25 +4,118 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 import dash_bootstrap_components as dbc
-
-# ----------------------------------------------------------------------------------------------
-# 1. Load & clean CRZ Vehicle-Entry data only
-# ----------------------------------------------------------------------------------------------
-
-# CRZ_CSV = "MTA_Congestion_Relief_Zone_Vehicle_Entries__Beginning_2025_20250708.csv"  # local file
-# CRZ_CSV = "https://drive.google.com/uc?export=download&id=1PpARt1Za85hZrMFQipirgg1o7JKfuVlJ"
-
-# Create sample data for immediate testing
-print("Creating sample CRZ data for testing...")
 import numpy as np
 from datetime import datetime, timedelta
+import requests
+import io
 
-# Create sample data with realistic CRZ structure
-dates = pd.date_range('2025-01-01', '2025-06-30', freq='10T')
+# Dropbox direct download URL for CRZ data
+CRZ_CSV_URL = "https://www.dropbox.com/scl/fi/no91aso4hhf2yi1wl9de5/MTA_Congestion_Relief_Zone_Vehicle_Entries__Beginning_2025_20250708.csv?rlkey=hbfljmt2n2ac64h52y3tapo4z&st=x0z517yn&dl=1"
 
-# Realistic CRZ vehicle classes (from actual CSV)
-vehicle_classes = ['1 - Cars, Pickups and Vans', '2 - Single-Unit Trucks', '3 - Multi-Unit Trucks', 
-                   '4 - Buses', '5 - Motorcycles', 'TLC Taxi/FHV']
+def load_crz_data():
+    """Load CRZ data from Dropbox"""
+    print("Loading CRZ data from Dropbox...")
+    
+    try:
+        # Download from Dropbox
+        print("Downloading CSV from Dropbox...")
+        response = requests.get(CRZ_CSV_URL, stream=True)
+        
+        if response.status_code != 200:
+            raise Exception(f"Failed to download from Dropbox: {response.status_code}")
+        
+        # Load the CSV data
+        df = pd.read_csv(io.BytesIO(response.content), on_bad_lines='skip', engine='c', sep=',')
+        print(f"Loaded {len(df)} rows from Dropbox")
+        
+        # Debug: Show raw values
+        print("Raw Toll Date values:")
+        print(df['Toll Date'].head().tolist())
+        
+        print("Raw Toll 10 Minute Block values:")
+        print(df['Toll 10 Minute Block'].head().tolist())
+        
+        # Check if Datetime column exists
+        if 'Datetime' in df.columns:
+            print("Raw Datetime values:")
+            print(df['Datetime'].head().tolist())
+        else:
+            print("No Datetime column found")
+        
+        # The CSV parsing is misaligned - let me fix this
+        print("Fixing misaligned CSV parsing...")
+        
+        # Parse the correct columns with their proper formats
+        df["Toll 10 Minute Block"] = pd.to_datetime(df["Toll 10 Minute Block"], format="%m/%d/%Y %I:%M:%S %p", errors='coerce')
+        df["Toll Date"] = pd.to_datetime(df["Toll Date"], format="%m/%d/%Y", errors='coerce')
+        
+        print(f"Sample Toll Date: {df['Toll Date'].iloc[0]}")
+        print(f"Sample Toll 10 Minute Block: {df['Toll 10 Minute Block'].iloc[0]}")
+        print(f"Valid Toll Date rows: {df['Toll Date'].notna().sum()}")
+        print(f"Valid Toll 10 Minute Block rows: {df['Toll 10 Minute Block'].notna().sum()}")
+        
+        # Remove rows with invalid timestamps
+        df = df.dropna(subset=['Toll 10 Minute Block', 'Toll Date'])
+        print(f"After timestamp conversion: {len(df)} rows")
+        
+        # Add derived columns
+        df["Hour"] = df["Toll 10 Minute Block"].dt.hour
+        df["Minute"] = df["Toll 10 Minute Block"].dt.minute
+        df["Month"] = df["Toll 10 Minute Block"].dt.month_name()
+        df["MonthNum"] = df["Toll 10 Minute Block"].dt.month
+        df["Week"] = df["Toll 10 Minute Block"].dt.isocalendar().week
+        
+        # Fix month order for nicer x-axis sorting
+        month_order = list(pd.date_range("2025-01-01", periods=12, freq="MS").strftime("%B"))
+        df["Month"] = pd.Categorical(df["Month"], categories=month_order, ordered=True)
+        
+        # Fill missing values to avoid NaNs in filters
+        for col, default in {
+            "Detection Region": "Unknown",
+            "Vehicle Class": "Unknown",
+            "Excluded Roadway Entries": 0,
+            "Time Period": "Unknown",
+            "Detection Group": "Unknown",
+        }.items():
+            if col in df.columns:
+                df[col] = df[col].fillna(default)
+        
+        print(f"Final data shape: {df.shape}")
+        print(f"Vehicle Classes: {sorted(df['Vehicle Class'].unique())}")
+        print(f"Detection Regions: {sorted(df['Detection Region'].unique())}")
+        print(f"Detection Groups: {sorted(df['Detection Group'].unique())}")
+        print(f"Date range: {df['Toll Date'].min()} to {df['Toll Date'].max()}")
+        print(f"Total CRZ Entries: {df['CRZ Entries'].sum()}")
+        
+        # Analyze trends in the data
+        print("\n=== TREND ANALYSIS ===")
+        daily_totals = df.groupby('Toll Date')['CRZ Entries'].sum().reset_index()
+        daily_totals = daily_totals.sort_values('Toll Date')
+        
+        print(f"First 5 days total entries: {daily_totals.head()['CRZ Entries'].tolist()}")
+        print(f"Last 5 days total entries: {daily_totals.tail()['CRZ Entries'].tolist()}")
+        
+        # Calculate trend
+        first_week_avg = daily_totals.head(7)['CRZ Entries'].mean()
+        last_week_avg = daily_totals.tail(7)['CRZ Entries'].mean()
+        print(f"First week average: {first_week_avg:.0f}")
+        print(f"Last week average: {last_week_avg:.0f}")
+        
+        if last_week_avg > first_week_avg:
+            print("TREND: CRZ entries are INCREASING over time")
+        else:
+            print("TREND: CRZ entries are DECREASING over time")
+        
+        return df
+        
+    except Exception as e:
+        print(f"Error loading CRZ data: {e}")
+        print("ERROR: Cannot load CRZ data from Dropbox!")
+        print("Please ensure the Dropbox URL is accessible.")
+        raise Exception(f"Failed to load CRZ data: {e}")
+
+# Load the data
+df = load_crz_data()
 
 # Define the correct relationships between Detection Regions and Groups
 region_group_mapping = {
@@ -43,26 +136,6 @@ detection_groups = ['Brooklyn Bridge', 'East 60th St', 'FDR Drive at 60th St', '
                     'Hugh L. Carey Tunnel', 'Lincoln Tunnel', 'Manhattan Bridge', 'Queens Midtown Tunnel', 
                     'Queensboro Bridge', 'West 60th St', 'West Side Highway at 60th St', 'Williamsburg Bridge']
 
-# Create realistic sample data with correct relationships
-sample_data = {
-    'Toll Date': dates.date,
-    'Toll Hour': dates,
-    'Toll 10 Minute Block': dates,
-    'Minute of Hour': dates.minute,
-    'Hour of Day': dates.hour,
-    'Day of Week Int': dates.dayofweek,
-    'Day of Week': dates.day_name(),
-    'Toll Week': dates.isocalendar().week,
-    'Time Period': np.random.choice(['Peak', 'Non-Peak'], len(dates)),
-    'Vehicle Class': np.random.choice(vehicle_classes, len(dates)),
-    'Detection Region': np.random.choice(detection_regions, len(dates)),
-    'CRZ Entries': np.random.randint(0, 200, len(dates)),  # More realistic entry counts
-    'Excluded Roadway Entries': np.random.randint(0, 10, len(dates))
-}
-
-# Create the dataframe
-df = pd.DataFrame(sample_data)
-
 # Now assign Detection Groups based on the selected Detection Region
 def assign_detection_group(row):
     region = row['Detection Region']
@@ -81,29 +154,6 @@ print("\nVerifying region-group relationships:")
 for region in sorted(df['Detection Region'].unique()):
     groups = sorted(df[df['Detection Region'] == region]['Detection Group'].unique())
     print(f"{region}: {groups}")
-
-df["Toll 10 Minute Block"] = pd.to_datetime(df["Toll 10 Minute Block"], format="%m/%d/%Y %I:%M:%S %p")
-df["Toll Date"] = pd.to_datetime(df["Toll Date"], format="%m/%d/%Y")
-
-df["Hour"] = df["Toll 10 Minute Block"].dt.hour
-df["Minute"] = df["Toll 10 Minute Block"].dt.minute
-df["Month"] = df["Toll 10 Minute Block"].dt.month_name()
-df["MonthNum"] = df["Toll 10 Minute Block"].dt.month
-df["Week"] = df["Toll 10 Minute Block"].dt.isocalendar().week
-
-# Fix month order for nicer x-axis sorting
-month_order = list(pd.date_range("2025-01-01", periods=12, freq="MS").strftime("%B"))
-df["Month"] = pd.Categorical(df["Month"], categories=month_order, ordered=True)
-
-# Fill missing values to avoid NaNs in filters
-for col, default in {
-    "Detection Region": "Unknown",
-    "Vehicle Class": "Unknown",
-    "Excluded Roadway Entries": 0,
-    "Time Period": "Unknown",
-    "Detection Group": "Unknown",
-}.items():
-    df[col] = df[col].fillna(default)
 
 # ----------------------------------------------------------------------------------------------
 # 2. Dash App – CRZ dashboard only (no taxi / bus)
