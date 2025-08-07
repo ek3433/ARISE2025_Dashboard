@@ -92,8 +92,15 @@ if df is not None:
     )
     
     # Date range filter
-    min_date = df["Toll Date"].min()
-    max_date = df["Toll Date"].max()
+    # Get valid date range (excluding NaT values)
+    valid_dates = df["Toll Date"].dropna()
+    if len(valid_dates) > 0:
+        min_date = valid_dates.min()
+        max_date = valid_dates.max()
+    else:
+        min_date = pd.Timestamp("2025-01-01")
+        max_date = pd.Timestamp("2025-12-31")
+    
     date_range = st.sidebar.date_input(
         "Select Date Range:",
         value=(min_date, max_date),
@@ -125,10 +132,15 @@ if df is not None:
     filtered = df[
         (df["Vehicle Class"].isin(selected_vehicles)) &
         (df["Detection Region"].isin(selected_regions)) &
-        (df["Detection Group"].isin(selected_groups)) &
-        (df["Toll Date"] >= pd.to_datetime(date_range[0])) &
-        (df["Toll Date"] <= pd.to_datetime(date_range[1]))
+        (df["Detection Group"].isin(selected_groups))
     ]
+    
+    # Apply date filtering only if we have valid dates
+    if len(date_range) == 2 and date_range[0] and date_range[1]:
+        filtered = filtered[
+            (filtered["Toll Date"] >= pd.to_datetime(date_range[0])) &
+            (filtered["Toll Date"] <= pd.to_datetime(date_range[1]))
+        ]
     
     # Display summary stats
     col1, col2, col3, col4 = st.columns(4)
@@ -137,7 +149,14 @@ if df is not None:
     with col2:
         st.metric("Total CRZ Entries", f"{filtered['CRZ Entries'].sum():,.0f}")
     with col3:
-        st.metric("Date Range", f"{filtered['Toll Date'].min().strftime('%Y-%m-%d')} to {filtered['Toll Date'].max().strftime('%Y-%m-%d')}")
+        # Fix NaT error by handling null dates properly
+        min_date = filtered['Toll Date'].min()
+        max_date = filtered['Toll Date'].max()
+        if pd.isna(min_date) or pd.isna(max_date):
+            date_range_text = "Date Range: No valid dates"
+        else:
+            date_range_text = f"Date Range: {min_date.strftime('%Y-%m-%d')} to {max_date.strftime('%Y-%m-%d')}"
+        st.metric("Date Range", date_range_text)
     with col4:
         st.metric("Vehicle Classes", len(filtered['Vehicle Class'].unique()))
     
