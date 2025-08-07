@@ -12,8 +12,6 @@ CRZ_CSV_URL = "https://www.dropbox.com/scl/fi/no91aso4hhf2yi1wl9de5/MTA_Congesti
 @st.cache_data
 def load_crz_data():
     """Load CRZ data from Dropbox - using ACTUAL data, no random assignment"""
-    st.info("Loading CRZ data from Dropbox...")
-    
     try:
         # Download from Dropbox
         response = requests.get(CRZ_CSV_URL, stream=True)
@@ -23,7 +21,6 @@ def load_crz_data():
         
         # Load the CSV data
         df = pd.read_csv(io.BytesIO(response.content), on_bad_lines='skip', engine='c', sep=',')
-        st.success(f"Loaded {len(df):,} rows from Dropbox")
         
         # Parse timestamps
         df["Toll 10 Minute Block"] = pd.to_datetime(df["Toll 10 Minute Block"], format="%m/%d/%Y %I:%M:%S %p", errors='coerce')
@@ -53,11 +50,6 @@ def load_crz_data():
         }.items():
             if col in df.columns:
                 df[col] = df[col].fillna(default)
-        
-        # NO RANDOM ASSIGNMENT - Use actual data from CSV
-        st.success(f"Using ACTUAL Detection Group data from CSV")
-        st.info(f"Detection Regions: {sorted(df['Detection Region'].unique())}")
-        st.info(f"Detection Groups: {sorted(df['Detection Group'].unique())}")
         
         return df
         
