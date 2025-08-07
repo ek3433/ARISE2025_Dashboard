@@ -161,60 +161,108 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
 
 with tab1:
     st.subheader("Time Series")
-    ts = getattr(filtered.groupby(agg_level)["CRZ Entries"], value_type)().reset_index()
-    ts = ts[ts["CRZ Entries"] > 0]
-    fig = px.line(ts, x=agg_level, y="CRZ Entries", title=f"{value_type.title()} CRZ Entries by {agg_level}")
-    st.plotly_chart(fig, use_container_width=True)
+    try:
+        ts = getattr(filtered.groupby(agg_level, observed=False)["CRZ Entries"], value_type)().reset_index()
+        ts = ts[ts["CRZ Entries"] > 0]
+        if len(ts) > 0:
+            fig = px.line(ts, x=agg_level, y="CRZ Entries", title=f"{value_type.title()} CRZ Entries by {agg_level}")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No data available for the selected filters.")
+    except Exception as e:
+        st.error(f"Error creating time series plot: {e}")
 
 with tab2:
     st.subheader("Peak vs Non-Peak")
-    peak = getattr(filtered.groupby(["Time Period", "Detection Region"])["CRZ Entries"], value_type)().reset_index()
-    fig = px.bar(peak, x="Detection Region", y="CRZ Entries", color="Time Period",
-                 barmode="group", title=f"{value_type.title()} CRZ Entries: Peak vs Non-Peak by Region")
-    st.plotly_chart(fig, use_container_width=True)
+    try:
+        peak = getattr(filtered.groupby(["Time Period", "Detection Region"], observed=False)["CRZ Entries"], value_type)().reset_index()
+        if len(peak) > 0:
+            fig = px.bar(peak, x="Detection Region", y="CRZ Entries", color="Time Period",
+                         barmode="group", title=f"{value_type.title()} CRZ Entries: Peak vs Non-Peak by Region")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No data available for the selected filters.")
+    except Exception as e:
+        st.error(f"Error creating peak vs non-peak plot: {e}")
 
 with tab3:
     st.subheader("Heatmap by Region")
-    heat = getattr(filtered.groupby(["Hour", "Detection Region"])["CRZ Entries"], value_type)().reset_index()
-    heat_pivot = heat.pivot(index="Hour", columns="Detection Region", values="CRZ Entries").fillna(0)
-    fig = go.Figure(data=go.Heatmap(z=heat_pivot.values, x=heat_pivot.columns, y=heat_pivot.index, colorscale='Viridis'))
-    fig.update_layout(title=f"{value_type.title()} Hourly CRZ Entries by Region", xaxis_title="Region", yaxis_title="Hour")
-    st.plotly_chart(fig, use_container_width=True)
+    try:
+        heat = getattr(filtered.groupby(["Hour", "Detection Region"], observed=False)["CRZ Entries"], value_type)().reset_index()
+        if len(heat) > 0:
+            heat_pivot = heat.pivot(index="Hour", columns="Detection Region", values="CRZ Entries").fillna(0)
+            fig = go.Figure(data=go.Heatmap(z=heat_pivot.values, x=heat_pivot.columns, y=heat_pivot.index, colorscale='Viridis'))
+            fig.update_layout(title=f"{value_type.title()} Hourly CRZ Entries by Region", xaxis_title="Region", yaxis_title="Hour")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No data available for the selected filters.")
+    except Exception as e:
+        st.error(f"Error creating heatmap by region: {e}")
 
 with tab4:
     st.subheader("Heatmap by Group")
-    heat = getattr(filtered.groupby(["Hour", "Detection Group"])["CRZ Entries"], value_type)().reset_index()
-    heat_pivot = heat.pivot(index="Hour", columns="Detection Group", values="CRZ Entries").fillna(0)
-    fig = go.Figure(data=go.Heatmap(z=heat_pivot.values, x=heat_pivot.columns, y=heat_pivot.index, colorscale='Cividis'))
-    fig.update_layout(title=f"{value_type.title()} Hourly CRZ Entries by Group", xaxis_title="Detection Group", yaxis_title="Hour")
-    st.plotly_chart(fig, use_container_width=True)
+    try:
+        heat = getattr(filtered.groupby(["Hour", "Detection Group"], observed=False)["CRZ Entries"], value_type)().reset_index()
+        if len(heat) > 0:
+            heat_pivot = heat.pivot(index="Hour", columns="Detection Group", values="CRZ Entries").fillna(0)
+            fig = go.Figure(data=go.Heatmap(z=heat_pivot.values, x=heat_pivot.columns, y=heat_pivot.index, colorscale='Cividis'))
+            fig.update_layout(title=f"{value_type.title()} Hourly CRZ Entries by Group", xaxis_title="Detection Group", yaxis_title="Hour")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No data available for the selected filters.")
+    except Exception as e:
+        st.error(f"Error creating heatmap by group: {e}")
 
 with tab5:
     st.subheader("Vehicle Trends")
-    bar = getattr(filtered.groupby("Vehicle Class")["CRZ Entries"], value_type)().reset_index()
-    fig = px.bar(bar, x="Vehicle Class", y="CRZ Entries", title=f"{value_type.title()} CRZ Entries by Vehicle Class")
-    st.plotly_chart(fig, use_container_width=True)
+    try:
+        bar = getattr(filtered.groupby("Vehicle Class", observed=False)["CRZ Entries"], value_type)().reset_index()
+        if len(bar) > 0:
+            fig = px.bar(bar, x="Vehicle Class", y="CRZ Entries", title=f"{value_type.title()} CRZ Entries by Vehicle Class")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No data available for the selected filters.")
+    except Exception as e:
+        st.error(f"Error creating vehicle trends plot: {e}")
 
 with tab6:
     st.subheader("Monthly Trends")
-    tmp = filtered.copy()
-    tmp["YearMonth"] = tmp["Toll Date"].dt.to_period("M").dt.to_timestamp()
-    month = getattr(tmp.groupby(["YearMonth", "Detection Region"])["CRZ Entries"], value_type)().reset_index()
-    month = month.sort_values("YearMonth")
-    fig = px.bar(month, x="YearMonth", y="CRZ Entries", color="Detection Region",
-                title=f"{value_type.title()} CRZ Entries by Month and Region")
-    fig.update_xaxes(dtick="M1", tickformat="%Y-%m")
-    fig.update_layout(legend=dict(x=1.02, y=1, xanchor="left", yanchor="top"))
-    st.plotly_chart(fig, use_container_width=True)
+    try:
+        tmp = filtered.copy()
+        tmp["YearMonth"] = tmp["Toll Date"].dt.to_period("M").dt.to_timestamp()
+        month = getattr(tmp.groupby(["YearMonth", "Detection Region"], observed=False)["CRZ Entries"], value_type)().reset_index()
+        month = month.sort_values("YearMonth")
+        if len(month) > 0:
+            fig = px.bar(month, x="YearMonth", y="CRZ Entries", color="Detection Region",
+                        title=f"{value_type.title()} CRZ Entries by Month and Region")
+            fig.update_xaxes(dtick="M1", tickformat="%Y-%m")
+            fig.update_layout(legend=dict(x=1.02, y=1, xanchor="left", yanchor="top"))
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No data available for the selected filters.")
+    except Exception as e:
+        st.error(f"Error creating monthly trends plot: {e}")
 
 with tab7:
     st.subheader("Standard Deviation")
-    std = filtered.groupby(agg_level)["CRZ Entries"].std().reset_index()
-    fig = px.line(std, x=agg_level, y="CRZ Entries", title=f"Standard Deviation of CRZ Entries by {agg_level}")
-    st.plotly_chart(fig, use_container_width=True)
+    try:
+        std = filtered.groupby(agg_level, observed=False)["CRZ Entries"].std().reset_index()
+        if len(std) > 0:
+            fig = px.line(std, x=agg_level, y="CRZ Entries", title=f"Standard Deviation of CRZ Entries by {agg_level}")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No data available for the selected filters.")
+    except Exception as e:
+        st.error(f"Error creating standard deviation plot: {e}")
 
 with tab8:
     st.subheader("Excluded Roadway Entries")
-    excl = getattr(filtered.groupby("Toll Date")["Excluded Roadway Entries"], value_type)().reset_index()
-    fig = px.line(excl, x="Toll Date", y="Excluded Roadway Entries", title=f"{value_type.title()} Excluded Roadway Entries Over Time")
-    st.plotly_chart(fig, use_container_width=True) 
+    try:
+        excl = getattr(filtered.groupby("Toll Date", observed=False)["Excluded Roadway Entries"], value_type)().reset_index()
+        if len(excl) > 0:
+            fig = px.line(excl, x="Toll Date", y="Excluded Roadway Entries", title=f"{value_type.title()} Excluded Roadway Entries Over Time")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No data available for the selected filters.")
+    except Exception as e:
+        st.error(f"Error creating excluded entries plot: {e}") 
