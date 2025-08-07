@@ -7,36 +7,40 @@ from dash import dcc, html, Input, Output, State
 import pandas as pd
 import plotly.express as px
 import dash_bootstrap_components as dbc
+import requests
+import io
 
 # ----------------------------------------------------------------------------------------------
-# 1. Load BUS ridership data from Google Drive
+# 1. Load BUS ridership data from Dropbox
 # ----------------------------------------------------------------------------------------------
 
-# Google Drive URLs for bus data
-BUS_2020_2024_URL = "https://drive.google.com/uc?export=download&id=15LJHuu9oleo_3R7ugYDu_akNHMX6AvLF"
-BUS_2025_URL = "https://drive.google.com/uc?export=download&id=1BJbjV4vcx31dMOY2f3YlJ-r1ot3WG8nG"
+# Dropbox URLs for bus data
+BUS_2020_2024_URL = "https://www.dropbox.com/scl/fi/ntvykd0030knjmynx5eis/MTA_Bus_Hourly_Ridership__2020-2024.csv?rlkey=gllxkxk272i5ilo0ommjut0pt&st=xhyw3m51&dl=1"
+BUS_2025_URL = "https://www.dropbox.com/scl/fi/vts754bv2p9h3wyyjefze/MTA_Bus_Hourly_Ridership__Beginning_2025.csv?rlkey=tnzoc89gj0n7udwktagj6wo4l&st=lnmgxxb0&dl=1"
 
 def load_bus_data():
-    """Load bus data from Google Drive with error handling"""
-    print("Loading bus data from Google Drive...")
+    """Load bus data from Dropbox with error handling"""
+    print("Loading bus data from Dropbox...")
     
     try:
-        # Check if we have downloaded files first
-        if os.path.exists("bus_2020_2024.csv") and os.path.exists("bus_2025.csv"):
-            print("Using downloaded files...")
-            df_2020_2024 = pd.read_csv("bus_2020_2024.csv")
-            df_2025 = pd.read_csv("bus_2025.csv")
-        else:
-            # Load from Google Drive URLs
-            print("Loading 2020-2024 data from Google Drive...")
-            df_2020_2024 = pd.read_csv(BUS_2020_2024_URL, 
-                                      on_bad_lines='skip', engine='python')
-            print(f"Loaded {len(df_2020_2024)} rows from 2020-2024 data")
-            
-            print("Loading 2025 data from Google Drive...")
-            df_2025 = pd.read_csv(BUS_2025_URL, 
-                                 on_bad_lines='skip', engine='python')
-            print(f"Loaded {len(df_2025)} rows from 2025 data")
+        # Load from Dropbox URLs
+        print("Loading 2020-2024 data from Dropbox...")
+        response_2020_2024 = requests.get(BUS_2020_2024_URL, stream=True)
+        if response_2020_2024.status_code != 200:
+            raise Exception(f"Failed to download 2020-2024 data: {response_2020_2024.status_code}")
+        
+        df_2020_2024 = pd.read_csv(io.BytesIO(response_2020_2024.content), 
+                                  on_bad_lines='skip', engine='python')
+        print(f"Loaded {len(df_2020_2024)} rows from 2020-2024 data")
+        
+        print("Loading 2025 data from Dropbox...")
+        response_2025 = requests.get(BUS_2025_URL, stream=True)
+        if response_2025.status_code != 200:
+            raise Exception(f"Failed to download 2025 data: {response_2025.status_code}")
+        
+        df_2025 = pd.read_csv(io.BytesIO(response_2025.content), 
+                             on_bad_lines='skip', engine='python')
+        print(f"Loaded {len(df_2025)} rows from 2025 data")
         
         print(f"Columns: {df_2020_2024.columns.tolist()}")
         
@@ -64,7 +68,7 @@ def load_bus_data():
         
         # Aggregate by month and route
         bus_monthly = df_combined.groupby(['bus_route', 'Year', 'Month', 'YearMonth'])['ridership'].sum().reset_index()
-        bus_monthly = bus_monthly.rename(columns={'bus_route': 'Route'})
+        bus_monthly = bus_monthly.rename(columns={'bus_route': 'Route', 'ridership': 'Ridership'})
         
         print(f"Created monthly data with {len(bus_monthly)} rows")
         print(f"Available routes: {sorted(bus_monthly['Route'].unique())[:10]}...")

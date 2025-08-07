@@ -5,3 +5,4 @@ plotly
 qrcode
 pyarrow
 gdown>=4.7.0
+requests
